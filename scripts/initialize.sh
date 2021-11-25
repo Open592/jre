@@ -2,6 +2,13 @@
 
 set -euo pipefail
 
+JDK_NAME="jdk-17.0.1"
+
+# Links to JRE for each platform
+LINUX_JDK_LINK="https://download.java.net/java/GA/jdk17.0.1/2a2082e5a09d4267845be086888add4f/12/GPL/openjdk-17.0.1_linux-x64_bin.tar.gz"
+OSX_JDK_LINK="https://download.java.net/java/GA/jdk17.0.1/2a2082e5a09d4267845be086888add4f/12/GPL/openjdk-17.0.1_macos-x64_bin.tar.gz"
+WINDOWS_JDK_LINK="https://download.java.net/java/GA/jdk17.0.1/2a2082e5a09d4267845be086888add4f/12/GPL/openjdk-17.0.1_windows-x64_bin.zip"
+
 # The purpose of this script is to initialize the repository with the
 # minimal JRE environment which can run the following applications:
 #
@@ -49,9 +56,10 @@ download_jdk() {
 
 create_jre() {
     # We are intending this script to be run on Linux
+    JAVA_HOME="$LINUX_DOWNLOAD_DIRECTORY/out/$JDK_NAME"
     JLINK_SCRIPT="$LINUX_DOWNLOAD_DIRECTORY/out/$JDK_NAME/bin/jlink"
 
-    sh $JLINK_SCRIPT --compress=2 --module-path $1 --add-modules $2 --output $3    
+    $JLINK_SCRIPT --compress=2 --module-path $1 --add-modules $2 --output $3    
 }
 
 # We require wget to download jdk files
@@ -74,17 +82,10 @@ log "Downloading JDKs..."
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 REPO_ROOT="$SCRIPT_DIR/.."
 
-JDK_NAME="jdk-17.0.1"
-
 ROOT_DOWNLOAD_DIRECTORY="$REPO_ROOT/downloads"
 LINUX_DOWNLOAD_DIRECTORY="$ROOT_DOWNLOAD_DIRECTORY/linux"
 OSX_DOWNLOAD_DIRECTORY="$ROOT_DOWNLOAD_DIRECTORY/osx"
 WINDOWS_DOWNLOAD_DIRECTORY="$ROOT_DOWNLOAD_DIRECTORY/windows"
-
-# Links to JRE for each platform
-LINUX_JDK_LINK="https://download.java.net/java/GA/jdk17.0.1/2a2082e5a09d4267845be086888add4f/12/GPL/openjdk-17.0.1_linux-x64_bin.tar.gz"
-OSX_JDK_LINK="https://download.java.net/java/GA/jdk17.0.1/2a2082e5a09d4267845be086888add4f/12/GPL/openjdk-17.0.1_macos-x64_bin.tar.gz"
-WINDOWS_JDK_LINK="https://download.java.net/java/GA/jdk17.0.1/2a2082e5a09d4267845be086888add4f/12/GPL/openjdk-17.0.1_windows-x64_bin.zip"
 
 log "Downloading Linux JDK files..."
 download_jdk $LINUX_JDK_LINK $LINUX_DOWNLOAD_DIRECTORY
@@ -108,10 +109,22 @@ unzip -q "$WINDOWS_DOWNLOAD_DIRECTORY"/*.zip -d "$WINDOWS_DOWNLOAD_DIRECTORY/out
 verify_command "Failed to extract Windows JDK files"
 
 # Create JREs for each platform
-MODULE_LIST=""
+MODULE_LIST="java.base,java.datatransfer,java.desktop,jdk.jsobject"
 LINUX_MODULE_PATH="$LINUX_DOWNLOAD_DIRECTORY/out/$JDK_NAME/jmods"
 LINUX_OUTPUT_PATH="$REPO_ROOT/linux"
 OSX_MODULE_PATH="$OSX_DOWNLOAD_DIRECTORY/out/$JDK_NAME.jdk/Contents/Home/jmods"
 OSX_OUTPUT_PATH="$REPO_ROOT/osx"
 WINDOWS_MODULE_PATH="$WINDOWS_DOWNLOAD_DIRECTORY/out/$JDK_NAME/jmods"
 WINDOWS_OUTPUT_PATH="$REPO_ROOT/windows"
+
+log "Creating Linux JRE..."
+create_jre $LINUX_MODULE_PATH $MODULE_LIST $LINUX_OUTPUT_PATH
+verify_command "Failed to create Linux JRE"
+
+log "Creating OSX JRE..."
+create_jre $OSX_MODULE_PATH $MODULE_LIST $OSX_OUTPUT_PATH
+verify_command "Failed to create OSX JRE"
+
+log "Creating Windows JRE..."
+create_jre $WINDOWS_MODULE_PATH $MODULE_LIST $WINDOWS_OUTPUT_PATH
+verify_command "Failed to create Windows JRE"
